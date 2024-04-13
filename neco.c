@@ -3656,11 +3656,23 @@ static struct coroutine *evexists(int fd, enum evkind kind) {
 static int is_main_thread(void) {
     return IsGUIThread(false);
 }
-#elif defined(__linux__) || defined(__EMSCRIPTEN__) 
+#elif defined(__EMSCRIPTEN__)
+static int is_main_thread(void) {
+    return getpid() == gettid();
+}
+#elif defined(__linux__)
+  #if defined(__GLIBC__) && (__GLIBC__ >= 3 || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 30))
 int gettid(void);
 static int is_main_thread(void) {
     return getpid() == gettid();
 }
+  #else
+#include <sys/types.h>
+#include <sys/syscall.h>
+static int is_main_thread(void) {
+    return getpid() == (pid_t)syscall(SYS_gettid);
+}
+  #endif
 #else
 int pthread_main_np(void);
 static int is_main_thread(void) {
